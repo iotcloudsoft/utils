@@ -83,6 +83,19 @@ func (e *Engine) HGetObject(key string, field string, data interface{}) error {
 	return nil
 }
 
+// HGetMapString get map string
+func (e *Engine) HGetMapString(key string) (map[string]string, error) {
+	conn := e.pool.Get()
+	defer conn.Close()
+
+	reply, err := redis.StringMap(conn.Do("HGETALL", key))
+	if err != nil {
+		return nil, err
+	}
+
+	return reply, nil
+}
+
 // SetObject a key/value
 func (e *Engine) SetObject(key string, data interface{}, time int) error {
 	conn := e.pool.Get()
