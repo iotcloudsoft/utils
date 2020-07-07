@@ -97,7 +97,7 @@ func (e *Engine) HGetMapString(key string) (map[string]string, error) {
 }
 
 // SetObject a key/value
-func (e *Engine) SetObject(key string, data interface{}, time int) error {
+func (e *Engine) SetObject(key string, data interface{}) error {
 	conn := e.pool.Get()
 	defer conn.Close()
 
