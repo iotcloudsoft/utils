@@ -80,6 +80,19 @@ func (e *Engine) GetObject(key string, data interface{}) error {
 
 // HGetObject get a hash key
 func (e *Engine) HGetObject(key string, field string, data interface{}) error {
+	conn := e.pool.Get()
+	defer conn.Close()
+
+	reply, err := redis.Bytes(conn.Do("HGET", key, field))
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(reply, data)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
