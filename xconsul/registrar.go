@@ -27,7 +27,7 @@ func NewRegistrar(broker string) *Registrar {
 	}
 }
 
-func (r *Registrar) Open(name string, subname string, portal string) error {
+func (r *Registrar) Open(name string, subname string, ver string, portal string) error {
 	log.Println("new consul registar", r.broker)
 
 	ppart := strings.Split(portal, ":")
@@ -47,7 +47,7 @@ func (r *Registrar) Open(name string, subname string, portal string) error {
 	log.Println("portal", portalHost, portalPort)
 	r.registration = &api.AgentServiceRegistration{
 		ID:      name + "_" + subname + "_" + uuid.New(),
-		Name:    name + "_" + subname,
+		Name:    name + "_" + subname + "_" + ver,
 		Address: portalHost,
 		Port:    portalPort,
 		Tags:    []string{name, subname},
