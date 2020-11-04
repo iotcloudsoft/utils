@@ -31,7 +31,7 @@ func (r *Registrar) Open(name string, subname string, ver string, portal string)
 	log.Println("new consul registar", r.broker)
 
 	ppart := strings.Split(portal, ":")
-	if len(portal) < 2 {
+	if len(ppart) < 2 {
 		return fmt.Errorf("invalid portal", portal)
 	}
 
