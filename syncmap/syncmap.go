@@ -2,7 +2,6 @@ package syncmap
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"sync"
 )
@@ -30,11 +29,10 @@ func (m *SyncMap) Get(key interface{}, pvalue interface{}) (has bool, err error)
 	defer m.mutex.Unlock()
 
 	if _, ok := m.values[key]; !ok {
-		value := reflect.ValueOf(pvalue).Elem().Interface()
 		// 根据 pvalue 所指向的内容是否为 nil 判断是否做插入动作
-		if value != nil {
-			m.values[key] = value
-			log.Println("insert ", value, "to key", key)
+		if !reflect.ValueOf(pvalue).Elem().IsNil() {
+			// log.Println("insert ", reflect.ValueOf(pvalue).Elem().Interface(), "to key", key)
+			m.values[key] = reflect.ValueOf(pvalue).Elem().Interface()
 		}
 
 		return false, nil
@@ -44,6 +42,7 @@ func (m *SyncMap) Get(key interface{}, pvalue interface{}) (has bool, err error)
 	return true, nil
 }
 
+// Remove 删除元素
 func (m *SyncMap) Remove(key interface{}) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
