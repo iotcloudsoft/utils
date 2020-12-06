@@ -78,6 +78,19 @@ func (e *Engine) GetObject(key string, data interface{}) error {
 	return nil
 }
 
+// GetInt get a key
+func (e *Engine) GetInt(key string) (int, error) {
+	conn := e.pool.Get()
+	defer conn.Close()
+
+	n, err := redis.Int(conn.Do("GET", key))
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
 // HGetObject get a hash key
 func (e *Engine) HGetObject(key string, field string, data interface{}) error {
 	conn := e.pool.Get()
@@ -107,6 +120,19 @@ func (e *Engine) HGetMapString(key string) (map[string]string, error) {
 	}
 
 	return reply, nil
+}
+
+// Set a key/value
+func (e *Engine) Set(key string, value interface{}) error {
+	conn := e.pool.Get()
+	defer conn.Close()
+
+	_, err := conn.Do("SET", key, value)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // SetObject a key/value
