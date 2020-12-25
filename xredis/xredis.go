@@ -78,6 +78,19 @@ func (e *Engine) GetObject(key string, data interface{}) error {
 	return nil
 }
 
+// GetString get a key
+func (e *Engine) GetString(key string) (string, error) {
+	conn := e.pool.Get()
+	defer conn.Close()
+
+	s, err := redis.String(conn.Do("GET", key))
+	if err != nil {
+		return "", err
+	}
+
+	return s, nil
+}
+
 // GetInt get a key
 func (e *Engine) GetInt(key string) (int, error) {
 	conn := e.pool.Get()
