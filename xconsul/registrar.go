@@ -28,7 +28,7 @@ func NewRegistrar(broker string) *Registrar {
 }
 
 func (r *Registrar) Open(name string, subname string, ver string, portal string) error {
-	log.Println("new consul registar", r.broker)
+	log.Println("new consul registar to", r.broker, "for", name, subname, ver, portal)
 
 	ppart := strings.Split(portal, ":")
 	if len(ppart) < 2 {
