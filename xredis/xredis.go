@@ -122,6 +122,19 @@ func (e *Engine) HGetObject(key string, field string, data interface{}) error {
 	return nil
 }
 
+// GetInt64 get a key
+func (e *Engine) HGetInt64(key string, field string) (int64, error) {
+	conn := e.pool.Get()
+	defer conn.Close()
+
+	n, err := redis.Int64(conn.Do("HGET", key, field))
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
 // HGetMapString get map string
 func (e *Engine) HGetMapString(key string) (map[string]string, error) {
 	conn := e.pool.Get()
@@ -133,6 +146,24 @@ func (e *Engine) HGetMapString(key string) (map[string]string, error) {
 	}
 
 	return reply, nil
+}
+
+// HGetStruct get struct by ScanStruct
+func (e *Engine) HGetStruct(key string, result interface{}) error {
+	conn := e.pool.Get()
+	defer conn.Close()
+
+	reply, err := redis.Values(conn.Do("HGETALL", key))
+	if err != nil {
+		return err
+	}
+
+	err = redis.ScanStruct(reply, result)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Set a key/value
@@ -166,6 +197,19 @@ func (e *Engine) SetObject(key string, data interface{}) error {
 	return nil
 }
 
+// HSet set a key/value of
+func (e *Engine) HSet(key string, field string, value interface{}) error {
+	conn := e.pool.Get()
+	defer conn.Close()
+
+	_, err := conn.Do("HSET", key, field, value)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // HSetObject get a hash key
 func (e *Engine) HSetObject(key string, field string, data interface{}) error {
 	conn := e.pool.Get()
@@ -177,6 +221,19 @@ func (e *Engine) HSetObject(key string, field string, data interface{}) error {
 	}
 
 	_, err = conn.Do("HSET", key, field, value)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// HSetStruct set struct
+func (e *Engine) HSetStruct(key string, value interface{}) error {
+	conn := e.pool.Get()
+	defer conn.Close()
+
+	_, err := conn.Do("HMSET", redis.Args{}.Add(key).AddFlat(value)...)
 	if err != nil {
 		return err
 	}
