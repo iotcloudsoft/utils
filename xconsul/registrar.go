@@ -3,19 +3,20 @@ package xconsul
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/go-kit/kit/sd/consul"
 	"github.com/hashicorp/consul/api"
 	"github.com/pborman/uuid"
 )
 
 type Registrar struct {
 	broker       string
-	client       consul.Client
+	client       *api.Client
 	registration *api.AgentServiceRegistration
+	healthPrefix string
 	exitch       chan int
 }
 
@@ -27,31 +28,32 @@ func NewRegistrar(broker string) *Registrar {
 	}
 }
 
-func (r *Registrar) Open(name string, subname string, ver string, portal string) error {
+func (r *Registrar) Open(name string, subname string, ver string, portal string, healthPrefix string) error {
 	log.Println("new consul registar to", r.broker, "for", name, subname, ver, portal)
+	r.healthPrefix = healthPrefix
 
 	ppart := strings.Split(portal, ":")
 	if len(ppart) < 2 {
 		return fmt.Errorf("invalid portal", portal)
 	}
 
-	check := api.AgentServiceCheck{
-		HTTP:     "http://" + portal + "/health",
-		Interval: "10s",
-		Timeout:  "1s",
-		Notes:    "Consul check service health status",
-	}
-
 	portalHost := ppart[0]
 	portalPort, _ := strconv.Atoi(ppart[1])
 	log.Println("portal", portalHost, portalPort)
+	id := name + "_" + subname + "_" + uuid.New()
 	r.registration = &api.AgentServiceRegistration{
-		ID:      name + "_" + subname + "_" + uuid.New(),
+		ID:      id,
 		Name:    name + "_" + subname + "_" + ver,
 		Address: portalHost,
 		Port:    portalPort,
 		Tags:    []string{name, subname},
-		Check:   &check,
+		Check: &api.AgentServiceCheck{
+			Timeout:                        "5s",
+			Interval:                       "10s",
+			HTTP:                           "http://" + portal + r.healthPrefix + "?id=" + id,
+			DeregisterCriticalServiceAfter: "30s",
+			Notes:                          "Consul check service health status",
+		},
 	}
 
 	go r.loop()
@@ -62,7 +64,7 @@ func (r *Registrar) Close() {
 	r.exitch <- 1 // 退出循环
 	if r.client != nil {
 		log.Println("dergister from consul", r.broker)
-		r.client.Deregister(r.registration)
+		r.client.Agent().ServiceDeregister(r.registration.ID)
 	}
 }
 
@@ -92,17 +94,37 @@ func (r *Registrar) loop() {
 	}
 }
 
-func register(config *api.Config, reg *api.AgentServiceRegistration) (consul.Client, error) {
-	stdclient, err := api.NewClient(config)
+func register(config *api.Config, reg *api.AgentServiceRegistration) (*api.Client, error) {
+	client, err := api.NewClient(config)
 	if err != nil {
 		return nil, err
 	}
 
-	client := consul.NewClient(stdclient)
-	err = client.Register(reg)
+	err = client.Agent().ServiceRegister(reg)
 	if err != nil {
 		return nil, err
 	}
 
 	return client, nil
+}
+
+func (r *Registrar) MakeHealthHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		params := req.URL.Query()
+		// log.Println("params", params)
+		idParam := params["id"]
+		if len(idParam) < 1 {
+			http.Error(w, "invalid id", 400)
+			return
+		}
+
+		id := idParam[0]
+		if id != r.registration.ID {
+			http.Error(w, "invalid id", 400)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte("{\"status\":true}"))
+	})
 }
